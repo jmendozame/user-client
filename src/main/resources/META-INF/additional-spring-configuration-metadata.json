@@ -1,0 +1,7 @@
+{"properties": [
+  {
+    "name": "password.regex",
+    "type": "java.lang.String",
+    "description": "A description for 'password.regex'"
+  }
+]}
