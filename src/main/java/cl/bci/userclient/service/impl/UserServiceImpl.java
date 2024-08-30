@@ -5,6 +5,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.validation.Valid;
 
@@ -30,6 +31,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import cl.bci.userclient.constantes.UserStatus;
+import cl.bci.userclient.dto.PhoneDTO;
+import cl.bci.userclient.dto.UserDTO;
+import cl.bci.userclient.dto.UserDTOWithoutToken;
 import cl.bci.userclient.model.Phone;
 import cl.bci.userclient.model.User;
 import cl.bci.userclient.repository.IPhoneRepository;
@@ -64,35 +68,54 @@ public class UserServiceImpl implements IUserService {
 	@Transactional(readOnly = true)
 	public ResponseEntity<Map<String, Object>> findByActive() {
 		Map<String, Object> response = new HashMap<>();
-		List<User> userList = (List<User>) userRepository.findByActive(UserStatus.ON);
+		List<User> userList = userRepository.findByActive(UserStatus.ON);
 		if (!userList.isEmpty()) {
-			response.put("usuarios", userList);
-			return new ResponseEntity<Map<String, Object>>(response, HttpStatus.OK);
+			List<UserDTOWithoutToken> usersDTO = userList.stream().map(this::convertToDTOWithoutToken)
+					.collect(Collectors.toList());
+			response.put("usuarios", usersDTO);
+			return new ResponseEntity<>(response, HttpStatus.OK);
 		} else {
 			response.put("mensaje", "¡No hay usuarios ingresados!");
-			return new ResponseEntity<Map<String, Object>>(response, HttpStatus.OK);
-
+			return new ResponseEntity<>(response, HttpStatus.OK);
 		}
 	}
 
 	@Override
 	public ResponseEntity<Map<String, Object>> create(@Valid User user, BindingResult result) {
 		Map<String, Object> response = new HashMap<>();
+		User newUser;
+
 		if (result.hasErrors()) {
 			handleValidationErrors(result, response);
 			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 		}
-		if (userRepository.existsByEmail(user.getEmail())) {
+
+		if (userRepository.existsByEmailAndActive(user.getEmail(), UserStatus.ON)) {
 			response.put("mensaje", "El correo electrónico ya está registrado");
-			return new ResponseEntity<Map<String, Object>>(response, HttpStatus.BAD_REQUEST);
+			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 		}
-		String unencryptedPassword = user.getPassword();
-		User newUser = saveUser(user);
-		user.setToken(callOAuthTokenEndpoint(newUser.getEmail(), unencryptedPassword));
-		newUser = userRepository.save(user);
+
+		// Verificar si el correo ya está registrado pero inactivo
+		User existingUser = userRepository.findByEmail(user.getEmail());
+		if (existingUser != null && existingUser.getActive() == UserStatus.OFF) {
+			existingUser.setActive(UserStatus.ON);
+			existingUser.setName(user.getName());
+			existingUser.setPassword(passwordEncoder.encode(user.getPassword()));
+			updatePhones(user, existingUser); // Actualizar los teléfonos
+			existingUser.setModificationDate(new Date());
+
+			newUser = userRepository.save(existingUser);
+		} else {
+			// Crear un nuevo usuario si no existe
+			String unencryptedPassword = user.getPassword();
+			newUser = saveUser(user);
+			user.setToken(callOAuthTokenEndpoint(newUser.getEmail(), unencryptedPassword));
+			newUser = userRepository.save(user);
+		}
+
 		response.put("mensaje", "¡El usuario ha sido creado con éxito!");
-		response.put("usuario", newUser);
-		return new ResponseEntity<Map<String, Object>>(response, HttpStatus.CREATED);
+		response.put("usuario", convertToDTO(newUser));
+		return new ResponseEntity<>(response, HttpStatus.CREATED);
 	}
 
 	@Transactional
@@ -108,13 +131,12 @@ public class UserServiceImpl implements IUserService {
 	}
 
 	private void handleValidationErrors(BindingResult result, Map<String, Object> response) {
-		Map<String, String> errores = new HashMap<>();
-		for (FieldError error : result.getFieldErrors()) {
-			errores.put(error.getField(), error.getDefaultMessage());
-		}
+		Map<String, String> errores = result.getFieldErrors().stream()
+				.collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage));
 		response.put("mensaje", errores);
 	}
 
+	// TODO Se le puede agregar un bad request
 	@Override
 	@Transactional
 	public ResponseEntity<Map<String, Object>> update(@Valid User user, BindingResult result) {
@@ -130,20 +152,19 @@ public class UserServiceImpl implements IUserService {
 				response.put("mensaje", "Usuario no encontrado");
 				return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
 			}
-
 		} catch (DataAccessException e) {
 			e.printStackTrace();
 			response.put("mensaje", "Error al actualizar en la base de datos");
 			response.put("error", e.getMessage().concat(": ").concat(e.getMostSpecificCause().getMessage()));
-			return new ResponseEntity<Map<String, Object>>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 		response.put("mensaje", "¡El usuario ha sido actualizado con éxito!");
-		response.put("usuario", userUpdate);
-		return new ResponseEntity<Map<String, Object>>(response, HttpStatus.CREATED);
+		response.put("usuario", convertToDTOWithoutToken(userUpdate));
+		return new ResponseEntity<>(response, HttpStatus.CREATED);
 	}
 
 	private User updateUser(User user) {
-		User userUpdate = userRepository.findById(user.getId());
+		User userUpdate = userRepository.findByIdAndActive(user.getId(), UserStatus.ON);
 		if (userUpdate != null) {
 			userUpdate.setName(user.getName());
 			userUpdate.setEmail(user.getEmail());
@@ -158,10 +179,8 @@ public class UserServiceImpl implements IUserService {
 		List<Phone> updatedPhones = user.getPhones();
 		if (updatedPhones != null && !updatedPhones.isEmpty()) {
 			userUpdate.getPhones().clear();
-			for (Phone phone : updatedPhones) {
-				Phone savedPhone = phoneRepository.save(phone);
-				userUpdate.getPhones().add(savedPhone);
-			}
+			userUpdate.getPhones()
+					.addAll(updatedPhones.stream().map(phoneRepository::save).collect(Collectors.toList()));
 		}
 	}
 
@@ -186,12 +205,12 @@ public class UserServiceImpl implements IUserService {
 			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 		response.put("mensaje", "¡Contraseña actualizada con éxito!");
-		response.put("usuario", userUpdatePass);
+		response.put("usuario", convertToDTOWithoutToken(userUpdatePass));
 		return new ResponseEntity<>(response, HttpStatus.OK);
 	}
 
 	private User updateIdPassword(Long userId, String newPassword) {
-		User user = userRepository.findById(userId);
+		User user = userRepository.findByIdAndActive(userId, UserStatus.ON);
 		if (user != null) {
 			user.setPassword(passwordEncoder.encode(newPassword));
 			user.setModificationDate(new Date());
@@ -204,7 +223,7 @@ public class UserServiceImpl implements IUserService {
 	public ResponseEntity<Map<String, Object>> delete(Long id) {
 		Map<String, Object> response = new HashMap<>();
 		try {
-			User user = userRepository.findById(id);
+			User user = userRepository.findByIdAndActive(id, UserStatus.ON);
 			if (user != null) {
 				user.setActive(UserStatus.OFF);
 				user.setModificationDate(new Date());
@@ -220,6 +239,38 @@ public class UserServiceImpl implements IUserService {
 			return new ResponseEntity<Map<String, Object>>(response, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 		return new ResponseEntity<Map<String, Object>>(response, HttpStatus.OK);
+	}
+
+	// Métodos de conversión entre DTOs y entidades
+	private UserDTO convertToDTO(User user) {
+		UserDTO userDTO = new UserDTO();
+		userDTO.setId(user.getId());
+		userDTO.setNombre(user.getName());
+		userDTO.setCorreo(user.getEmail());
+		userDTO.setContraseña(user.getPassword());
+		userDTO.setTelefonos(convertPhonesToDTO(user.getPhones()));
+		userDTO.setToken(user.getToken());
+		return userDTO;
+	}
+
+	private UserDTOWithoutToken convertToDTOWithoutToken(User user) {
+		UserDTOWithoutToken userDTO = new UserDTOWithoutToken();
+		userDTO.setId(user.getId());
+		userDTO.setNombre(user.getName());
+		userDTO.setCorreo(user.getEmail());
+		userDTO.setContraseña(user.getPassword());
+		userDTO.setTelefonos(convertPhonesToDTO(user.getPhones()));
+		return userDTO;
+	}
+
+	private List<PhoneDTO> convertPhonesToDTO(List<Phone> phones) {
+		return phones.stream().map(phone -> {
+			PhoneDTO phoneDTO = new PhoneDTO();
+			phoneDTO.setNumero(phone.getPhoneNumber());
+			phoneDTO.setCodigoCiudad(phone.getCityCode());
+			phoneDTO.setCodigoPais(phone.getCountryCode());
+			return phoneDTO;
+		}).collect(Collectors.toList());
 	}
 
 	private String callOAuthTokenEndpoint(String email, String password) {
@@ -249,7 +300,7 @@ public class UserServiceImpl implements IUserService {
 			return jsonNode.get("access_token").asText();
 		} catch (JsonProcessingException e) {
 			e.printStackTrace();
-			return null;
+			return "";
 		}
 	}
 

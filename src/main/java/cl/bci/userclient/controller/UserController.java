@@ -22,41 +22,42 @@ import cl.bci.userclient.service.IUserService;
 import io.swagger.annotations.ApiOperation;
 
 @RestController
-@RequestMapping("/administrador-clientes")
+@RequestMapping("/api/users")
 public class UserController {
 
 	@Autowired
 	private IUserService userServices;
 
 	@ApiOperation(value = "Muestra todos los usuarios que se han creado", response = Map.class)
-	@GetMapping("/mostrar-usuarios")
-	public ResponseEntity<Map<String, Object>> show() {
+	@GetMapping
+	public ResponseEntity<Map<String, Object>> getAll() {
 		return userServices.findByActive();
 	}
 
 	@ApiOperation(value = "Crea un nuevo usuario", response = Map.class)
-	@PostMapping("/crear-usuario")
+	@PostMapping
 	public ResponseEntity<Map<String, Object>> create(@Valid @RequestBody User user, BindingResult result) {
 		return userServices.create(user, result);
 	}
 
 	@ApiOperation(value = "Modifica un usuario", response = Map.class)
-	@PutMapping("/modificar-usuario")
-	public ResponseEntity<Map<String, Object>> update(@Valid @RequestBody User User, BindingResult result) {
-		return userServices.update(User, result);
+	@PutMapping("/{id}")
+	public ResponseEntity<Map<String, Object>> update(@PathVariable Long id, @Valid @RequestBody User user,
+			BindingResult result) {
+		user.setId(id);
+		return userServices.update(user, result);
 	}
 
 	@ApiOperation(value = "Actualiza solo la contraseña de un usuario", response = Map.class)
-	@PatchMapping("/actualizar-contrasena/{id}")
+	@PatchMapping("/{id}/password")
 	public ResponseEntity<Map<String, Object>> updatePassword(@PathVariable Long id,
 			@RequestBody Map<String, String> request) {
 		return userServices.updatePassword(id, request.get("nuevaContraseña"));
 	}
 
 	@ApiOperation(value = "Elimina un usuario", response = Map.class)
-	@DeleteMapping("/eliminar-usuario/{id}")
+	@DeleteMapping("/{id}")
 	public ResponseEntity<Map<String, Object>> delete(@PathVariable Long id) {
 		return userServices.delete(id);
 	}
-
 }

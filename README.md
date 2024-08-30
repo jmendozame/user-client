@@ -45,61 +45,61 @@ Probar las Funcionalidades
 --------------------------
 
 1. **Obtener Todos los Usuarios**
-   - **Endpoint:** `GET http://localhost:8080/administrador-clientes/mostrar-usuarios`
+   - **Endpoint:** `GET http://localhost:8080/api/users`
    - **Descripción:** Obtiene todos los usuarios registrados.
 
 2. **Crear un Nuevo Usuario**
-   - **Endpoint:** `POST http://localhost:8080/administrador-clientes/crear-usuario`
+   - **Endpoint:** `POST http://localhost:8080/api/users`
    - **Cuerpo de la Solicitud (Ejemplo):**
      ```json
-     {
-       "name": "Nombre Usuario",
-       "email": "correo@ejemplo.com",
-       "password": "Contraseña123",
-       "phones": [
-         {
-           "number": "123456789",
-           "cityCode": "1",
-           "countryCode": "+56"
-         }
-       ]
-     }
+		{
+		    "nombre": "Nombre Usuario",
+		    "correo": "correo@ejemplo.com",
+		    "contraseña": "Contraseña123",
+		    "telefonos": [
+		        {
+		            "numero": "123456789",
+		            "codigoCiudad": "1",
+		            "codigoPais": "+56"
+		        }
+		    ]
+		}
      ```
      
    - **Descripción:** Crea un nuevo usuario. Asegúrate de proporcionar un correo electrónico único.
 
 3. **Modificar un Usuario Existente**
-   - **Endpoint:** `PUT http://localhost:8080/administrador-clientes/modificar-usuario`
+   - **Endpoint:** `PUT http://localhost:8080/api/users/{id}`
    - **Cuerpo de la Solicitud (Ejemplo):**
      ```json
-     {
-       "id": 1,
-       "name": "Nuevo Nombre",
-       "email": "nuevo@ejemplo.com",
-       "phones": [
-         {
-           "id": 1,
-           "number": "987654321",
-           "cityCode": "2",
-           "countryCode": "+56"
-         }
-       ]
-     }
+ 	{
+        "id": 2,
+        "nombre": "Jorge Luis Mendoza",
+        "correo": "jorge@ejemplo.com",
+        "contraseña": "$2a$10$Kr5iOM0LoB19gcXUIyPSFuSN3xovbGozEcUKiEe5CzLMzLwZCLN7G",
+        "telefonos": [
+            {
+                "numero": 954318921,
+                "codigoCiudad": 9,
+                "codigoPais": 56
+            }
+        ]
+	}
      ```
    - **Descripción:** Modifica un usuario existente. Asegúrate de proporcionar el ID correcto.
 
 4. **Actualizar Contraseña de un Usuario**
-   - **Endpoint:** `PATCH http://localhost:8080/administrador-clientes/actualizar-contrasena/{id}`
+   - **Endpoint:** `PATCH http://localhost:8080/api/users/{id}/password`
    - **Cuerpo de la Solicitud (Ejemplo):**
      ```json
      {
-       "nuevaContraseña": "NuevaContraseña456"
+       "nuevaContraseña": "S3cure!P@ssw0rd"
      }
      ```
    - **Descripción:** Actualiza la contraseña de un usuario por ID.
 
 5. **Eliminar un Usuario (Lógicamente)**
-   - **Endpoint:** `DELETE http://localhost:8080/administrador-clientes/eliminar-usuario/{id}`
+   - **Endpoint:** `DELETE http://localhost:8080/api/users/{id}`
    - **Descripción:** Elimina lógicamente un usuario por ID.
 
 Notas Adicionales

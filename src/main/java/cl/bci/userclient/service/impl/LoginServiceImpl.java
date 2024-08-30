@@ -25,6 +25,7 @@ public class LoginServiceImpl implements UserDetailsService {
 		try {
 			User user;
 			user = userRepository.findByEmail(email);
+			//TODO Buscar por usuario activo.
 			if (user == null) {
 				System.out.println("Error en el login: el usuario ".concat(email).concat("no esta registrado"));
 				throw new UsernameNotFoundException(

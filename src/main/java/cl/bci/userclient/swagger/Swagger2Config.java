@@ -61,7 +61,7 @@ public class Swagger2Config {
 
 	private SecurityContext securityContext() {
 		return SecurityContext.builder().securityReferences(defaultAuth())
-				.forPaths(PathSelectors.ant("/administrador-clientes/**")).build();
+				.forPaths(PathSelectors.ant("/api/users/**")).build();
 	}
 
 	private List<SecurityReference> defaultAuth() {

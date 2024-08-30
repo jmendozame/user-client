@@ -12,7 +12,7 @@ import javax.persistence.Id;
 import javax.persistence.OneToMany;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
-import javax.validation.constraints.Email;
+//import javax.validation.constraints.Email;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.Pattern;
 
@@ -34,7 +34,7 @@ public class User implements Serializable {
 	private String name;
 
 	@Column(unique = true)
-	@Email(message = "El formato del correo no es válido")
+	//@Email(message = "El formato del correo no es válido")
     @Pattern(regexp = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,6}$", message = "El formato del correo no es válido")
 	@JsonProperty("correo")
 	private String email;
@@ -98,7 +98,7 @@ public class User implements Serializable {
 		return phones;
 	}
 
-	public void setPhone(List<Phone> phones) {
+	public void setPhones(List<Phone> phones) {
 		this.phones = phones;
 	}
 
