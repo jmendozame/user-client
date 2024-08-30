@@ -72,19 +72,19 @@ Probar las Funcionalidades
    - **Endpoint:** `PUT http://localhost:8080/api/users/{id}`
    - **Cuerpo de la Solicitud (Ejemplo):**
      ```json
- 	{
-        "id": 2,
-        "nombre": "Jorge Luis Mendoza",
-        "correo": "jorge@ejemplo.com",
-        "contraseña": "$2a$10$Kr5iOM0LoB19gcXUIyPSFuSN3xovbGozEcUKiEe5CzLMzLwZCLN7G",
-        "telefonos": [
-            {
-                "numero": 954318921,
-                "codigoCiudad": 9,
-                "codigoPais": 56
-            }
-        ]
-	}
+    {
+          "id": 2,
+          "nombre": "Jorge Luis Mendoza",
+          "correo": "jorge@ejemplo.com",
+          "contraseña": "$2a$10$Kr5iOM0LoB19gcXUIyPSFuSN3xovbGozEcUKiEe5CzLMzLwZCLN7G",
+          "telefonos": [
+              {
+                  "numero": 954318921,
+                  "codigoCiudad": 9,
+                  "codigoPais": 56
+              }
+          ]
+    }
      ```
    - **Descripción:** Modifica un usuario existente. Asegúrate de proporcionar el ID correcto.
 
